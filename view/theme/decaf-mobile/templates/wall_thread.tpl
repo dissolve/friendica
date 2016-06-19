@@ -1,5 +1,5 @@
 
-<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}}">
+<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}} {{if $item.toplevel}} h-entry {{else}} u-comment h-cite {{/if}}">
 <a name="{{$item.id}}" ></a>
 {{*<!--<div class="wall-item-outside-wrapper {{$item.indent}}{{$item.previewing}} wallwall" id="wall-item-outside-wrapper-{{$item.id}}" >-->*}}
 	<div class="wall-item-content-wrapper {{$item.indent}}" id="wall-item-content-wrapper-{{$item.id}}" >
@@ -41,10 +41,10 @@
 		<div class="wall-item-content" id="wall-item-content-{{$item.id}}" >
 			<div class="wall-item-title" id="wall-item-title-{{$item.id}}">{{$item.title}}</div>
 			{{*<!--<div class="wall-item-title-end"></div>-->*}}
-			<div class="wall-item-body" id="wall-item-body-{{$item.id}}" >{{$item.body}}
+			<div class="wall-item-body e-content" id="wall-item-body-{{$item.id}}" >{{$item.body}}
 					{{*<!--<div class="body-tag">-->*}}
 						{{foreach $item.tags as $tag}}
-							<span class='body-tag tag'>{{$tag}}</span>
+							<span class='body-tag tag p-category'>{{$tag}}</span>
 						{{/foreach}}
 					{{*<!--</div>-->*}}
 			{{if $item.has_cats}}
@@ -70,7 +70,7 @@
 			</div>
 			{{/if}}
 			{{if $item.plink}}
-				{{*<!--<div class="wall-item-links-wrapper">-->*}}<a href="{{$item.plink.href}}" title="{{$item.plink.title}}" target="external-link" class="wall-item-links-wrapper icon remote-link{{$item.sparkle}}"></a>{{*<!--</div>-->*}}
+				{{*<!--<div class="wall-item-links-wrapper">-->*}}<a href="{{$item.plink.href}}" title="{{$item.plink.title}}" target="external-link" class="wall-item-links-wrapper icon remote-link{{$item.sparkle}} u-url"></a>{{*<!--</div>-->*}}
 			{{/if}}
 			{{if $item.edpost}}
 				<a class="editpost icon pencil" href="{{$item.edpost.0}}" title="{{$item.edpost.1}}"></a>

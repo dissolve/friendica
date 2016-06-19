@@ -39,7 +39,7 @@
 	<dl class="entity_url">
 		<dt>Url</dt>
 		<dd>
-			<a id="pod_location" class="url" rel="me" href="{{$diaspora.podloc}}/">{{$diaspora.podloc}}/</a>
+			<a id="pod_location" class="url" href="{{$diaspora.podloc}}/">{{$diaspora.podloc}}/</a>
 		</dd>
 	</dl>
 	<dl class="entity_photo">

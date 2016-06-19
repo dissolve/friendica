@@ -5,7 +5,7 @@
 	</div>
 	<div id="collapsed-comments-{{$item.id}}" class="collapsed-comments" style="display: none;">
 {{/if}}
-<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}}">
+<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}} {{if $item.toplevel}} h-entry {{else}} u-comment h-cite {{/if}}">
 <a name="{{$item.id}}" ></a>
 <div class="wall-item-outside-wrapper {{$item.indent}}{{$item.previewing}}{{if $item.owner_url}} wallwall{{/if}}" id="wall-item-outside-wrapper-{{$item.id}}" >
 	<div class="wall-item-content-wrapper {{$item.indent}} {{$item.shiny}}" id="wall-item-content-wrapper-{{$item.id}}" >
@@ -37,17 +37,17 @@
 				<div class="wall-item-location" id="wall-item-location-{{$item.id}}">{{$item.location}}</div>
 			</div>
 		</div>
-		<div class="wall-item-author">
-				<a href="{{$item.profile_url}}" target="redir" title="{{$item.linktitle|escape:'html'}}" class="wall-item-name-link"><span class="wall-item-name{{$item.sparkle}}" id="wall-item-name-{{$item.id}}" >{{$item.name}}</span></a>{{if $item.owner_url}} {{$item.to}} <a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle|escape:'html'}}" class="wall-item-name-link"><span class="wall-item-name{{$item.osparkle}}" id="wall-item-ownername-{{$item.id}}">{{$item.owner_name}}</span></a> {{$item.vwall}}{{/if}}<br />
+		<div class="wall-item-author p-author h-card">
+				<a href="{{$item.profile_url}}" target="redir" title="{{$item.linktitle|escape:'html'}}" class="wall-item-name-link u-url"><span class="wall-item-name{{$item.sparkle}} p-name" id="wall-item-name-{{$item.id}}" >{{$item.name}}</span></a>{{if $item.owner_url}} {{$item.to}} <a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle|escape:'html'}}" class="wall-item-name-link u-url"><span class="wall-item-name{{$item.osparkle}}" id="wall-item-ownername-{{$item.id}} p-name">{{$item.owner_name}}</span></a> {{$item.vwall}}{{/if}}<br />
 				<div class="wall-item-ago"  id="wall-item-ago-{{$item.id}}" title="{{$item.localtime|escape:'html'}}">{{$item.ago}}</div>
 		</div>
 		<div class="wall-item-content" id="wall-item-content-{{$item.id}}" >
 			<div class="wall-item-title" id="wall-item-title-{{$item.id}}">{{$item.title}}</div>
 			<div class="wall-item-title-end"></div>
-			<div class="wall-item-body" id="wall-item-body-{{$item.id}}" >{{$item.body}}
+			<div class="wall-item-body e-content" id="wall-item-body-{{$item.id}}" >{{$item.body}}
 					<div class="body-tag">
 						{{foreach $item.tags as $tag}}
-							<span class='tag'>{{$tag}}</span>
+							<span class='tag p-category'>{{$tag}}</span>
 						{{/foreach}}
 					</div>
 			{{if $item.has_cats}}
@@ -71,7 +71,7 @@
 			</div>
 			{{/if}}
 			{{if $item.plink}}
-				<div class="wall-item-links-wrapper"><a href="{{$item.plink.href}}" title="{{$item.plink.title|escape:'html'}}" target="_blank" class="icon remote-link{{$item.sparkle}}"></a></div>
+				<div class="wall-item-links-wrapper"><a href="{{$item.plink.href}}" title="{{$item.plink.title|escape:'html'}}" target="_blank" class="icon remote-link{{$item.sparkle}} u-url"></a></div>
 			{{/if}}
 			{{if $item.edpost}}
 				<a class="editpost icon pencil" href="{{$item.edpost.0}}" title="{{$item.edpost.1|escape:'html'}}"></a>
