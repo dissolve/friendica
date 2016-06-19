@@ -114,7 +114,7 @@ function network_init(&$a) {
 	require_once('include/group.php');
 	require_once('include/contact_widgets.php');
 	require_once('include/items.php');
-	require_once('include/forums.php');
+	require_once('include/ForumManager.php');
 
 	if(! x($a->page,'aside'))
 		$a->page['aside'] = '';
@@ -143,16 +143,16 @@ function network_init(&$a) {
 	// search terms header
 	if(x($_GET,'search')) {
 		$a->page['content'] .= replace_macros(get_markup_template("section_title.tpl"),array(
-			'$title' => sprintf( t('Search Results For: %s'), $search)
+			'$title' => sprintf( t('Results for: %s'), $search)
 		));
 	}
 
 	$a->page['aside'] .= (feature_enabled(local_user(),'groups') ? group_side('network/0','network','standard',$group_id) : '');
-	$a->page['aside'] .= (feature_enabled(local_user(),'forumlist_widget') ? widget_forumlist(local_user(),$cid) : '');
-	$a->page['aside'] .= posted_date_widget($a->get_baseurl() . '/network',local_user(),false);
-	$a->page['aside'] .= networks_widget($a->get_baseurl(true) . '/network',(x($_GET, 'nets') ? $_GET['nets'] : ''));
+	$a->page['aside'] .= (feature_enabled(local_user(),'forumlist_widget') ? ForumManager::widget(local_user(),$cid) : '');
+	$a->page['aside'] .= posted_date_widget('network',local_user(),false);
+	$a->page['aside'] .= networks_widget('network',(x($_GET, 'nets') ? $_GET['nets'] : ''));
 	$a->page['aside'] .= saved_searches($search);
-	$a->page['aside'] .= fileas_widget($a->get_baseurl(true) . '/network',(x($_GET, 'file') ? $_GET['file'] : ''));
+	$a->page['aside'] .= fileas_widget('network',(x($_GET, 'file') ? $_GET['file'] : ''));
 
 }
 
@@ -312,7 +312,10 @@ function network_content(&$a, $update = 0) {
 		return login(false);
 	}
 
-	// TODO:is this really necessary? $a is already available to hooks
+	// Rawmode is used for fetching new content at the end of the page
+	$rawmode = (isset($_GET["mode"]) AND ($_GET["mode"] == "raw"));
+
+	/// @TODO Is this really necessary? $a is already available to hooks
 	$arr = array('query' => $a->query_string);
 	call_hooks('network_content_init', $arr);
 
@@ -346,8 +349,8 @@ function network_content(&$a, $update = 0) {
 	$o = '';
 
 	// item filter tabs
-	// TODO: fix this logic, reduce duplication
-	//$a->page['content'] .= '<div class="tabs-wrapper">';
+	/// @TODO fix this logic, reduce duplication
+	/// $a->page['content'] .= '<div class="tabs-wrapper">';
 
 	list($no_active, $all_active, $postord_active, $conv_active, $new_active, $starred_active, $bookmarked_active, $spam_active) = network_query_get_sel_tab($a);
 	// if no tabs are selected, defaults to comments
@@ -360,7 +363,7 @@ function network_content(&$a, $update = 0) {
 	$tabs = array(
 		array(
 			'label'	=> t('Commented Order'),
-			'url'	=> $a->get_baseurl(true) . '/' . str_replace('/new', '', $cmd) . '?f=&order=comment' . ((x($_GET,'cid')) ? '&cid=' . $_GET['cid'] : ''),
+			'url'	=> str_replace('/new', '', $cmd) . '?f=&order=comment' . ((x($_GET,'cid')) ? '&cid=' . $_GET['cid'] : ''),
 			'sel'	=> $all_active,
 			'title'	=> t('Sort by Comment Date'),
 			'id'	=> 'commented-order-tab',
@@ -368,7 +371,7 @@ function network_content(&$a, $update = 0) {
 		),
 		array(
 			'label'	=> t('Posted Order'),
-			'url'	=> $a->get_baseurl(true) . '/' . str_replace('/new', '', $cmd) . '?f=&order=post' . ((x($_GET,'cid')) ? '&cid=' . $_GET['cid'] : ''),
+			'url'	=> str_replace('/new', '', $cmd) . '?f=&order=post' . ((x($_GET,'cid')) ? '&cid=' . $_GET['cid'] : ''),
 			'sel'	=> $postord_active,
 			'title'	=> t('Sort by Post Date'),
 			'id'	=> 'posted-order-tab',
@@ -379,7 +382,7 @@ function network_content(&$a, $update = 0) {
 	if(feature_enabled(local_user(),'personal_tab')) {
 		$tabs[] = array(
 			'label'	=> t('Personal'),
-			'url'	=> $a->get_baseurl(true) . '/' . str_replace('/new', '', $cmd) . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : '/?f=') . '&conv=1',
+			'url'	=> str_replace('/new', '', $cmd) . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : '/?f=') . '&conv=1',
 			'sel'	=> $conv_active,
 			'title'	=> t('Posts that mention or involve you'),
 			'id'	=> 'personal-tab',
@@ -390,7 +393,7 @@ function network_content(&$a, $update = 0) {
 	if(feature_enabled(local_user(),'new_tab')) {
 		$tabs[] = array(
 			'label'	=> t('New'),
-			'url'	=> $a->get_baseurl(true) . '/' . str_replace('/new', '', $cmd) . ($len_naked_cmd ? '/' : '') . 'new' . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : ''),
+			'url'	=> str_replace('/new', '', $cmd) . ($len_naked_cmd ? '/' : '') . 'new' . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : ''),
 			'sel'	=> $new_active,
 			'title'	=> t('Activity Stream - by date'),
 			'id'	=> 'activitiy-by-date-tab',
@@ -401,7 +404,7 @@ function network_content(&$a, $update = 0) {
 	if(feature_enabled(local_user(),'link_tab')) {
 		$tabs[] = array(
 			'label'	=> t('Shared Links'),
-			'url'	=> $a->get_baseurl(true) . '/' . str_replace('/new', '', $cmd) . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : '/?f=') . '&bmark=1',
+			'url'	=> str_replace('/new', '', $cmd) . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : '/?f=') . '&bmark=1',
 			'sel'	=> $bookmarked_active,
 			'title'	=> t('Interesting Links'),
 			'id'	=> 'shared-links-tab',
@@ -412,7 +415,7 @@ function network_content(&$a, $update = 0) {
 	if(feature_enabled(local_user(),'star_posts')) {
 		$tabs[] = array(
 			'label'	=> t('Starred'),
-			'url'	=> $a->get_baseurl(true) . '/' . str_replace('/new', '', $cmd) . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : '/?f=') . '&star=1',
+			'url'	=> str_replace('/new', '', $cmd) . ((x($_GET,'cid')) ? '/?f=&cid=' . $_GET['cid'] : '/?f=') . '&star=1',
 			'sel'	=> $starred_active,
 			'title'	=> t('Favourite Posts'),
 			'id'	=> 'starred-posts-tab',
@@ -470,7 +473,7 @@ function network_content(&$a, $update = 0) {
 	}
 	set_pconfig(local_user(), 'network.view', 'net.selected', ($nets ? $nets : 'all'));
 
-	if(! $update) {
+	if(!$update AND !$rawmode) {
 		if($group) {
 			if(($t = group_public_members($group)) && (! get_pconfig(local_user(),'system','nowarn_insecure'))) {
 				notice( sprintf( tt('Warning: This group contains %s member from an insecure network.',
@@ -544,31 +547,34 @@ function network_content(&$a, $update = 0) {
 			if($update)
 				killme();
 			notice( t('No such group') . EOL );
-			goaway($a->get_baseurl(true) . '/network/0');
+			goaway('network/0');
 			// NOTREACHED
 		}
 
 		$contacts = expand_groups(array($group));
-
-		$contact_str_self = "";
+		$gcontacts = expand_groups(array($group), false, true);
 
 		if((is_array($contacts)) && count($contacts)) {
+			$contact_str_self = "";
+			$gcontact_str_self = "";
+
 			$contact_str = implode(',',$contacts);
-			$self = q("SELECT `id` FROM `contact` WHERE `uid` = %d AND `self`", intval($_SESSION['uid']));
-			if (count($self))
-				$contact_str_self = ",".$self[0]["id"];
-		}
-		else {
-			$contact_str = ' 0 ';
+			$gcontact_str = implode(',',$gcontacts);
+			$self = q("SELECT `contact`.`id`, `gcontact`.`id` AS `gid` FROM `contact`
+					INNER JOIN `gcontact` ON `gcontact`.`nurl` = `contact`.`nurl`
+					WHERE `uid` = %d AND `self`", intval($_SESSION['uid']));
+			if (count($self)) {
+				$contact_str_self = $self[0]["id"];
+				$gcontact_str_self = $self[0]["gid"];
+			}
+
+			$sql_post_table = " INNER JOIN `item` AS `temp1` ON `temp1`.`id` = ".$sql_table.".".$sql_parent;
+			$sql_extra3 .= " AND ($sql_table.`contact-id` IN ($contact_str) ";
+			$sql_extra3 .= " OR ($sql_table.`contact-id` = '$contact_str_self' AND `temp1`.`allow_gid` LIKE '".protect_sprintf('%<'.intval($group).'>%')."' AND `temp1`.`private`))";
+		} else {
+			$sql_extra3 .= " AND false ";
 			info( t('Group is empty'));
 		}
-
-		//$sql_post_table = " INNER JOIN (SELECT DISTINCT(`parent`) FROM `item` WHERE (`contact-id` IN ($contact_str) OR `allow_gid` like '".protect_sprintf('%<'.intval($group).'>%')."') and deleted = 0 ORDER BY `created` DESC) AS `temp1` ON $sql_table.$sql_parent = `temp1`.`parent` ";
-
-		$sql_extra3 .= " AND `contact-id` IN ($contact_str$contact_str_self) ";
-		$sql_extra3 .= " AND EXISTS (SELECT `id` FROM `item` WHERE (`contact-id` IN ($contact_str)
-				OR `allow_gid` LIKE '".protect_sprintf('%<'.intval($group).'>%')."') AND `deleted` = 0
-				AND `parent` = $sql_table.$sql_parent) ";
 
 		$o = replace_macros(get_markup_template("section_title.tpl"),array(
 			'$title' => sprintf( t('Group: %s'), $r[0]['name'])
@@ -582,11 +588,7 @@ function network_content(&$a, $update = 0) {
 			intval($cid)
 		);
 		if(count($r)) {
-			$sql_post_table = " INNER JOIN (SELECT DISTINCT(`parent`) FROM `item`
-					    WHERE 1 $sql_options AND `contact-id` = ".intval($cid)." AND `deleted` = 0
-					    ORDER BY `item`.`received` DESC) AS `temp1`
-					    ON $sql_table.$sql_parent = `temp1`.`parent` ";
-			$sql_extra = "";
+			$sql_extra = " AND ".$sql_table.".`contact-id` = ".intval($cid);
 
 			$entries[0] = array(
 				'id' => 'network',
@@ -609,7 +611,7 @@ function network_content(&$a, $update = 0) {
 		}
 		else {
 			notice( t('Invalid contact.') . EOL);
-			goaway($a->get_baseurl(true) . '/network');
+			goaway('network');
 			// NOTREACHED
 		}
 	}
@@ -668,7 +670,7 @@ function network_content(&$a, $update = 0) {
 	}
 
 	if($conv)
-		$sql_extra3 .= " AND `mention`";
+		$sql_extra3 .= " AND $sql_table.`mention`";
 
 	if($update) {
 
@@ -718,17 +720,14 @@ function network_content(&$a, $update = 0) {
 			$sql_order = "`item`.`received`";
 
 		// "New Item View" - show all items unthreaded in reverse created date order
-		$items = q("SELECT `item`.*, `item`.`id` AS `item_id`, `item`.`network` AS `item_network`,
-			`contact`.`name`, `contact`.`photo`, `contact`.`url`, `contact`.`rel`, `contact`.`writable`,
-			`contact`.`network`, `contact`.`thumb`, `contact`.`dfrn-id`, `contact`.`self`,
-			`contact`.`id` AS `cid`, `contact`.`uid` AS `contact-uid`
-			FROM $sql_table $sql_post_table INNER JOIN `contact` ON `contact`.`id` = `item`.`contact-id`
-			AND `contact`.`blocked` = 0 AND `contact`.`pending` = 0
-			WHERE `item`.`uid` = %d AND `item`.`visible` = 1
-			AND `item`.`deleted` = 0 AND `item`.`moderated` = 0
+		$items = q("SELECT %s, %s FROM $sql_table $sql_post_table
+			INNER JOIN `contact` ON `contact`.`id` = `item`.`contact-id` AND %s
+			WHERE %s AND `item`.`uid` = %d
 			$simple_update
 			$sql_extra $sql_nets
 			ORDER BY $sql_order DESC $pager_sql ",
+			item_fieldlist(), contact_fieldlist(),
+			contact_condition(), item_condition(),
 			intval($_SESSION['uid'])
 		);
 
@@ -808,16 +807,13 @@ function network_content(&$a, $update = 0) {
 
 			foreach ($parents_arr AS $parents) {
 //					$sql_extra ORDER BY `item`.`commented` DESC LIMIT %d",
-				$thread_items = q("SELECT `item`.*, `item`.`id` AS `item_id`, `item`.`network` AS `item_network`,
-					`contact`.`name`, `contact`.`photo`, `contact`.`url`, `contact`.`alias`, `contact`.`rel`, `contact`.`writable`,
-					`contact`.`network`, `contact`.`thumb`, `contact`.`dfrn-id`, `contact`.`self`,
-					`contact`.`id` AS `cid`, `contact`.`uid` AS `contact-uid`
-					FROM `item` INNER JOIN `contact` ON `contact`.`id` = `item`.`contact-id`
-					AND `contact`.`blocked` = 0 AND `contact`.`pending` = 0
-					WHERE `item`.`uid` = %d AND `item`.`visible` = 1 AND `item`.`deleted` = 0
-					AND `item`.`moderated` = 0
+				$thread_items = q("SELECT %s, %s FROM `item`
+					INNER JOIN `contact` ON `contact`.`id` = `item`.`contact-id` AND %s
+					WHERE %s AND `item`.`uid` = %d
 					AND `item`.`parent` = %d
 					ORDER BY `item`.`commented` DESC LIMIT %d",
+					item_fieldlist(), contact_fieldlist(),
+					contact_condition(), item_condition(),
 					intval(local_user()),
 					intval($parents),
 					intval($max_comments + 1)
@@ -855,14 +851,24 @@ function network_content(&$a, $update = 0) {
 
 
 	if((! $group) && (! $cid) && (! $star)) {
-		$r = q("UPDATE `item` SET `unseen` = 0
-			WHERE `unseen` = 1 AND `uid` = %d",
-			intval(local_user())
-		);
+
+		$unseen = q("SELECT `id` FROM `item` WHERE `unseen` AND `uid` = %d",
+				intval(local_user()));
+
+		if ($unseen)
+			$r = q("UPDATE `item` SET `unseen` = 0
+				WHERE `unseen` = 1 AND `uid` = %d",
+				intval(local_user())
+			);
 	}
 	else {
-		if($update_unseen)
-			$r = q("UPDATE `item` SET `unseen` = 0 $update_unseen");
+		if($update_unseen) {
+
+			$unseen = q("SELECT `id` FROM `item` ".$update_unseen);
+
+			if ($unseen)
+				$r = q("UPDATE `item` SET `unseen` = 0 $update_unseen");
+		}
 	}
 
 	// Set this so that the conversation function can find out contact info for our wall-wall items

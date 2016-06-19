@@ -13,8 +13,10 @@ function handle_pubsubhubbub() {
 	$r = q("SELECT * FROM `push_subscriber` WHERE `push` > 0");
 
 	foreach($r as $rr) {
-		//$params = get_feed_for($a, '', $rr['nickname'], $rr['last_update'], 0, true);
-		$params = ostatus_feed($a, $rr['nickname'], $rr['last_update']);
+
+		logger("Generate feed for user ".$rr['nickname']." - last updated ".$rr['last_update'], LOGGER_DEBUG);
+
+		$params = ostatus::feed($a, $rr['nickname'], $rr['last_update']);
 		$hmac_sig = hash_hmac("sha1", $params, $rr['secret']);
 
 		$headers = array("Content-type: application/atom+xml",
@@ -72,25 +74,14 @@ function pubsubpublish_run(&$argv, &$argc){
 	};
 
 	require_once('include/items.php');
-	require_once('include/pidfile.php');
 
 	load_config('config');
 	load_config('system');
 
-	$lockpath = get_lockpath();
-	if ($lockpath != '') {
-		$pidfile = new pidfile($lockpath, 'pubsubpublish');
-		if($pidfile->is_already_running()) {
-			logger("Already running");
-			if ($pidfile->running_time() > 9*60) {
-				$pidfile->kill();
-				logger("killed stale process");
-				// Calling a new instance
-				proc_run('php',"include/pubsubpublish.php");
-			}
+	// Don't check this stuff if the function is called by the poller
+	if (App::callstack() != "poller_run")
+		if (App::is_already_running("pubsubpublish", "include/pubsubpublish.php", 540))
 			return;
-		}
-	}
 
 	$a->set_baseurl(get_config('system','url'));
 

@@ -46,7 +46,10 @@ Friendica Documentation and Resources
 * [Plugin Development](help/Plugins)
 * [Theme Development](help/themes)
 * [Smarty 3 Templates](help/smarty3-templates)
+* [Database schema documantation](help/database)
+* [Class Autoloading](help/autoloader)
 * [Code - Reference(Doxygen generated - sets cookies)](doc/html/)
+
 
 **External Resources**
 

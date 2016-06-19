@@ -56,6 +56,7 @@
 			<span class="wall-item-network" title="{{$item.app}}">
 				{{$item.network_name}}
 			</span>
+			<div class="wall-item-network-end"></div>
 		</div>
 
 		<div itemprop="description" class="wall-item-content">
@@ -90,7 +91,7 @@
 			{{if $item.threaded}}
 			{{/if}}
 			{{if $item.comment}}
-				<a role="button" id="comment-{{$item.id}}" class="fakelink togglecomment" onclick="openClose('item-comments-{{$item.id}}'); commentExpand({{$item.id}});" title="{{$item.switchcomment}}"><i class="icon-reply"><span class="sr-only">{{$item.switchcomment}}</span></i></a>
+				<a role="button" id="comment-{{$item.id}}" class="fakelink togglecomment" onclick="openClose('item-comments-{{$item.id}}'); commentExpand({{$item.id}});" title="{{$item.switchcomment}}"><i class="icon-commenting"><span class="sr-only">{{$item.switchcomment}}</span></i></a>
 			{{/if}}
 
 			{{if $item.isevent}}

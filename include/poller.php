@@ -11,6 +11,7 @@ if (!file_exists("boot.php") AND (sizeof($_SERVER["argv"]) != 0)) {
 }
 
 require_once("boot.php");
+require_once("dbm.php");
 
 function poller_run(&$argv, &$argc){
 	global $a, $db;
@@ -26,21 +27,31 @@ function poller_run(&$argv, &$argc){
 		unset($db_host, $db_user, $db_pass, $db_data);
 	};
 
-	$load = current_load();
-	if($load) {
-		$maxsysload = intval(get_config('system','maxloadavg'));
-		if($maxsysload < 1)
-			$maxsysload = 50;
+	$max_processes = get_config('system', 'max_processes_backend');
+	if (intval($max_processes) == 0)
+		$max_processes = 5;
 
-		if(intval($load) > $maxsysload) {
-			logger('system: load ' . $load . ' too high. poller deferred to next scheduled run.');
+	$processlist = dbm::processlist();
+	if ($processlist["list"] != "") {
+		logger("Processcheck: Processes: ".$processlist["amount"]." - Processlist: ".$processlist["list"], LOGGER_DEBUG);
+
+		if ($processlist["amount"] > $max_processes) {
+			logger("Processcheck: Maximum number of processes for backend tasks (".$max_processes.") reached.", LOGGER_DEBUG);
 			return;
 		}
 	}
 
-	// Checking the number of workers
-	if (poller_too_much_workers(1))
+	if (poller_max_connections_reached())
 		return;
+
+	if (App::maxload_reached())
+		return;
+
+	// Checking the number of workers
+	if (poller_too_much_workers(1)) {
+		poller_kill_stale_workers();
+		return;
+	}
 
 	if(($argc <= 1) OR ($argv[1] != "no_cron")) {
 		// Run the cron job that calls all other jobs
@@ -50,16 +61,7 @@ function poller_run(&$argv, &$argc){
 		proc_run("php","include/cronhooks.php");
 
 		// Cleaning dead processes
-		$r = q("SELECT DISTINCT(`pid`) FROM `workerqueue` WHERE `executed` != '0000-00-00 00:00:00'");
-		foreach($r AS $pid)
-			if (!posix_kill($pid["pid"], 0))
-				q("UPDATE `workerqueue` SET `executed` = '0000-00-00 00:00:00', `pid` = 0 WHERE `pid` = %d",
-					intval($pid["pid"]));
-			else {
-				// To-Do: Kill long running processes
-				// But: Update processes (like the database update) mustn't be killed
-			}
-
+		poller_kill_stale_workers();
 	} else
 		// Sleep four seconds before checking for running processes again to avoid having too many workers
 		sleep(4);
@@ -71,6 +73,21 @@ function poller_run(&$argv, &$argc){
 	$starttime = time();
 
 	while ($r = q("SELECT * FROM `workerqueue` WHERE `executed` = '0000-00-00 00:00:00' ORDER BY `created` LIMIT 1")) {
+
+		// Log the type of database processes
+		$processlist = dbm::processlist();
+		if ($processlist["amount"] != "") {
+			logger("Processcheck: Processes: ".$processlist["amount"]." - Processlist: ".$processlist["list"], LOGGER_DEBUG);
+
+			if ($processlist["amount"] > $max_processes) {
+				logger("Processcheck: Maximum number of processes for backend tasks (".$max_processes.") reached.", LOGGER_DEBUG);
+				return;
+			}
+		}
+
+		// Constantly check the number of available database connections to let the frontend be accessible at any time
+		if (poller_max_connections_reached())
+			return;
 
 		// Count active workers and compare them with a maximum value that depends on the load
 		if (poller_too_much_workers(3))
@@ -122,6 +139,118 @@ function poller_run(&$argv, &$argc){
 			return;
 	}
 
+}
+
+/**
+ * @brief Checks if the number of database connections has reached a critical limit.
+ *
+ * @return bool Are more than 3/4 of the maximum connections used?
+ */
+function poller_max_connections_reached() {
+
+	// Fetch the max value from the config. This is needed when the system cannot detect the correct value by itself.
+	$max = get_config("system", "max_connections");
+
+	// Fetch the percentage level where the poller will get active
+	$maxlevel = get_config("system", "max_connections_level");
+	if ($maxlevel == 0)
+		$maxlevel = 75;
+
+	if ($max == 0) {
+		// the maximum number of possible user connections can be a system variable
+		$r = q("SHOW VARIABLES WHERE `variable_name` = 'max_user_connections'");
+		if ($r)
+			$max = $r[0]["Value"];
+
+		// Or it can be granted. This overrides the system variable
+		$r = q("SHOW GRANTS");
+		if ($r)
+			foreach ($r AS $grants) {
+				$grant = array_pop($grants);
+				if (stristr($grant, "GRANT USAGE ON"))
+					if (preg_match("/WITH MAX_USER_CONNECTIONS (\d*)/", $grant, $match))
+						$max = $match[1];
+			}
+	}
+
+	// If $max is set we will use the processlist to determine the current number of connections
+	// The processlist only shows entries of the current user
+	if ($max != 0) {
+		$r = q("SHOW PROCESSLIST");
+		if (!$r)
+			return false;
+
+		$used = count($r);
+
+		logger("Connection usage (user values): ".$used."/".$max, LOGGER_DEBUG);
+
+		$level = ($used / $max) * 100;
+
+		if ($level >= $maxlevel) {
+			logger("Maximum level (".$maxlevel."%) of user connections reached: ".$used."/".$max);
+			return true;
+		}
+	}
+
+	// We will now check for the system values.
+	// This limit could be reached although the user limits are fine.
+	$r = q("SHOW VARIABLES WHERE `variable_name` = 'max_connections'");
+	if (!$r)
+		return false;
+
+	$max = intval($r[0]["Value"]);
+	if ($max == 0)
+		return false;
+
+	$r = q("SHOW STATUS WHERE `variable_name` = 'Threads_connected'");
+	if (!$r)
+		return false;
+
+	$used = intval($r[0]["Value"]);
+	if ($used == 0)
+		return false;
+
+	logger("Connection usage (system values): ".$used."/".$max, LOGGER_DEBUG);
+
+	$level = $used / $max * 100;
+
+	if ($level < $maxlevel)
+		return false;
+
+	logger("Maximum level (".$level."%) of system connections reached: ".$used."/".$max);
+	return true;
+}
+
+/**
+ * @brief fix the queue entry if the worker process died
+ *
+ */
+function poller_kill_stale_workers() {
+	$r = q("SELECT `pid`, `executed` FROM `workerqueue` WHERE `executed` != '0000-00-00 00:00:00'");
+
+	if (!is_array($r) || count($r) == 0) {
+		// No processing here needed
+		return;
+	}
+
+	foreach($r AS $pid)
+		if (!posix_kill($pid["pid"], 0))
+			q("UPDATE `workerqueue` SET `executed` = '0000-00-00 00:00:00', `pid` = 0 WHERE `pid` = %d",
+				intval($pid["pid"]));
+		else {
+			// Kill long running processes
+			$duration = (time() - strtotime($pid["executed"])) / 60;
+			if ($duration > 180) {
+				logger("Worker process ".$pid["pid"]." took more than 3 hours. It will be killed now.");
+				posix_kill($pid["pid"], SIGTERM);
+
+				// Question: If a process is stale: Should we remove it or should we reschedule it?
+				// By now we rescheduling it. It's maybe not the wisest decision?
+				q("UPDATE `workerqueue` SET `executed` = '0000-00-00 00:00:00', `pid` = 0 WHERE `pid` = %d",
+					intval($pid["pid"]));
+			} else
+				logger("Worker process ".$pid["pid"]." now runs for ".round($duration)." minutes. That's okay.", LOGGER_DEBUG);
+		}
 }
 
 function poller_too_much_workers($stage) {

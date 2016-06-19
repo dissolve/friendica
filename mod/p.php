@@ -19,7 +19,7 @@ function p_init($a){
 
 	$guid = strtolower(substr($guid, 0, -4));
 
-	$item = q("SELECT `title`, `body`, `guid`, `contact-id`, `private`, `created`, `app` FROM `item` WHERE `uid` = 0 AND `guid` = '%s' AND `network` IN ('%s', '%s') LIMIT 1",
+	$item = q("SELECT `title`, `body`, `guid`, `contact-id`, `private`, `created`, `app` FROM `item` WHERE `uid` = 0 AND `guid` = '%s' AND `network` IN ('%s', '%s') AND `id` = `parent` LIMIT 1",
 		dbesc($guid), NETWORK_DFRN, NETWORK_DIASPORA);
 	if (!$item) {
 		header($_SERVER["SERVER_PROTOCOL"].' 404 '.t('Not Found'));
@@ -28,14 +28,14 @@ function p_init($a){
 
 	$post = array();
 
-	$reshared = diaspora_is_reshare($item[0]["body"]);
+	$reshared = diaspora::is_reshare($item[0]["body"]);
 
 	if ($reshared) {
 		$nodename = "reshare";
 		$post["root_diaspora_id"] = $reshared["root_handle"];
 		$post["root_guid"] = $reshared["root_guid"];
 		$post["guid"] = $item[0]["guid"];
-		$post["diaspora_handle"] = diaspora_handle_from_contact($item[0]["contact-id"]);
+		$post["diaspora_handle"] = diaspora::handle_from_contact($item[0]["contact-id"]);
 		$post["public"] = (!$item[0]["private"] ? 'true':'false');
 		$post["created_at"] = datetime_convert('UTC','UTC',$item[0]["created"]);
 	} else {
@@ -48,7 +48,7 @@ function p_init($a){
 		$nodename = "status_message";
 		$post["raw_message"] = str_replace("&", "&amp;", $body);
 		$post["guid"] = $item[0]["guid"];
-		$post["diaspora_handle"] = diaspora_handle_from_contact($item[0]["contact-id"]);
+		$post["diaspora_handle"] = diaspora::handle_from_contact($item[0]["contact-id"]);
 		$post["public"] = (!$item[0]["private"] ? 'true':'false');
 		$post["created_at"] = datetime_convert('UTC','UTC',$item[0]["created"]);
 		$post["provider_display_name"] = $item[0]["app"];

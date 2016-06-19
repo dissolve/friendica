@@ -2,6 +2,7 @@
 
 require_once("include/template_processor.php");
 require_once("include/friendica_smarty.php");
+require_once("include/Smilies.php");
 require_once("include/map.php");
 require_once("mod/proxy.php");
 
@@ -20,10 +21,10 @@ function replace_macros($s,$r) {
 	$stamp1 = microtime(true);
 
 	$a = get_app();
-	
+
 	// pass $baseurl to all templates
-	$r['$baseurl'] = z_root();
-	
+	$r['$baseurl'] = $a->get_baseurl();
+
 
 	$t = $a->template_engine();
 	try {
@@ -285,7 +286,7 @@ function paginate_data(&$a, $count=null) {
 	if (($a->page_offset != "") AND !preg_match('/[?&].offset=/', $stripped))
 		$stripped .= "&offset=".urlencode($a->page_offset);
 
-	$url = z_root() . '/' . $stripped;
+	$url = $stripped;
 
 	$data = array();
 	function _l(&$d, $name, $url, $text, $class="") {
@@ -829,35 +830,6 @@ function qp($s) {
 return str_replace ("%","=",rawurlencode($s));
 }}
 
-
-
-if(! function_exists('get_mentions')) {
-/**
- * @param array $item
- * @return string html for mentions #FIXME: remove html
- */
-function get_mentions($item) {
-	$o = '';
-	if(! strlen($item['tag']))
-		return $o;
-
-	$arr = explode(',',$item['tag']);
-	foreach($arr as $x) {
-		$matches = null;
-		if(preg_match('/@\[url=([^\]]*)\]/',$x,$matches)) {
-			$o .= "\t\t" . '<link rel="ostatus:attention" href="' . $matches[1] . '" />' . "\r\n";
-			$o .= "\t\t" . '<link rel="mentioned" href="' . $matches[1] . '" />' . "\r\n";
-		}
-	}
-
-	if (!$item['private']) {
-			$o .= "\t\t".'<link rel="ostatus:attention" href="http://activityschema.org/collection/public"/>'."\r\n";
-			$o .= "\t\t".'<link rel="mentioned" href="http://activityschema.org/collection/public"/>'."\r\n";
-	}
-
-	return $o;
-}}
-
 if(! function_exists('contact_block')) {
 /**
  * Get html for contact block.
@@ -895,9 +867,9 @@ function contact_block() {
 		$micropro = Null;
 
 	} else {
-		$r = q("SELECT * FROM `contact`
-				WHERE `uid` = %d AND `self` = 0 AND `blocked` = 0 and `pending` = 0
-					AND `hidden` = 0 AND `archive` = 0
+		$r = q("SELECT `id`, `uid`, `addr`, `url`, `name`, `micro`, `network` FROM `contact`
+				WHERE `uid` = %d AND NOT `self` AND NOT `blocked` AND NOT `pending`
+					AND NOT `hidden` AND NOT `archive`
 				AND `network` IN ('%s', '%s', '%s') ORDER BY RAND() LIMIT %d",
 				intval($a->profile['uid']),
 				dbesc(NETWORK_DFRN),
@@ -952,7 +924,7 @@ function micropro($contact, $redirect = false, $class = '', $textmode = false) {
 
 	if($redirect) {
 		$a = get_app();
-		$redirect_url = z_root() . '/redir/' . $contact['id'];
+		$redirect_url = 'redir/' . $contact['id'];
 		if(local_user() && ($contact['uid'] == local_user()) && ($contact['network'] === NETWORK_DFRN)) {
 			$redir = true;
 			$url = $redirect_url;
@@ -993,16 +965,17 @@ if(! function_exists('search')) {
  * @param string $url search url
  * @param boolean $savedsearch show save search button
  */
-function search($s,$id='search-box',$url='/search',$save = false, $aside = true) {
+function search($s,$id='search-box',$url='search',$save = false, $aside = true) {
 	$a = get_app();
 
 	$values = array(
 			'$s' => $s,
 			'$id' => $id,
-			'$action_url' => $a->get_baseurl((stristr($url,'network')) ? true : false) . $url,
+			'$action_url' => $url,
 			'$search_label' => t('Search'),
 			'$save_label' => t('Save'),
 			'$savedsearch' => feature_enabled(local_user(),'savedsearch'),
+			'$search_hint' => t('@name, !forum, #tags, content'),
 		);
 
 	if (!$aside) {
@@ -1108,160 +1081,6 @@ function get_mood_verbs() {
 	return $arr;
 }
 
-
-
-if(! function_exists('smilies')) {
-/**
- * Replaces text emoticons with graphical images
- *
- * It is expected that this function will be called using HTML text.
- * We will escape text between HTML pre and code blocks from being
- * processed.
- *
- * At a higher level, the bbcode [nosmile] tag can be used to prevent this
- * function from being executed by the prepare_text() routine when preparing
- * bbcode source for HTML display
- *
- * @param string $s
- * @param boolean $sample
- * @return string
- * @hook smilie ('texts' => smilies texts array, 'icons' => smilies html array, 'string' => $s)
- */
-function smilies($s, $sample = false) {
-	$a = get_app();
-
-	if(intval(get_config('system','no_smilies'))
-		|| (local_user() && intval(get_pconfig(local_user(),'system','no_smilies'))))
-		return $s;
-
-	$s = preg_replace_callback('/<pre>(.*?)<\/pre>/ism','smile_encode',$s);
-	$s = preg_replace_callback('/<code>(.*?)<\/code>/ism','smile_encode',$s);
-
-	$texts =  array(
-		'&lt;3',
-		'&lt;/3',
-		'&lt;\\3',
-		':-)',
-		';-)',
-		':-(',
-		':-P',
-		':-p',
-		':-"',
-		':-&quot;',
-		':-x',
-		':-X',
-		':-D',
-		'8-|',
-		'8-O',
-		':-O',
-		'\\o/',
-		'o.O',
-		'O.o',
-		'o_O',
-		'O_o',
-		":'(",
-		":-!",
-		":-/",
-		":-[",
-		"8-)",
-		':beer',
-		':homebrew',
-		':coffee',
-		':facepalm',
-		':like',
-		':dislike',
-		'~friendica',
-		'red#',
-		'red#matrix'
-
-	);
-
-	$icons = array(
-		'<img class="smiley" src="' . z_root() . '/images/smiley-heart.gif" alt="&lt;3" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-brokenheart.gif" alt="&lt;/3" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-brokenheart.gif" alt="&lt;\\3" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-smile.gif" alt=":-)" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-wink.gif" alt=";-)" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-frown.gif" alt=":-(" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-tongue-out.gif" alt=":-P" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-tongue-out.gif" alt=":-p" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-kiss.gif" alt=":-\"" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-kiss.gif" alt=":-\"" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-kiss.gif" alt=":-x" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-kiss.gif" alt=":-X" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-laughing.gif" alt=":-D" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-surprised.gif" alt="8-|" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-surprised.gif" alt="8-O" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-surprised.gif" alt=":-O" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-thumbsup.gif" alt="\\o/" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-Oo.gif" alt="o.O" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-Oo.gif" alt="O.o" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-Oo.gif" alt="o_O" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-Oo.gif" alt="O_o" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-cry.gif" alt=":\'(" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-foot-in-mouth.gif" alt=":-!" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-undecided.gif" alt=":-/" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-embarassed.gif" alt=":-[" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-cool.gif" alt="8-)" />',
-		'<img class="smiley" src="' . z_root() . '/images/beer_mug.gif" alt=":beer" />',
-		'<img class="smiley" src="' . z_root() . '/images/beer_mug.gif" alt=":homebrew" />',
-		'<img class="smiley" src="' . z_root() . '/images/coffee.gif" alt=":coffee" />',
-		'<img class="smiley" src="' . z_root() . '/images/smiley-facepalm.gif" alt=":facepalm" />',
-		'<img class="smiley" src="' . z_root() . '/images/like.gif" alt=":like" />',
-		'<img class="smiley" src="' . z_root() . '/images/dislike.gif" alt=":dislike" />',
-		'<a href="http://friendica.com">~friendica <img class="smiley" src="' . z_root() . '/images/friendica-16.png" alt="~friendica" /></a>',
-		'<a href="http://redmatrix.me/">red<img class="smiley" src="' . z_root() . '/images/rm-16.png" alt="red" />matrix</a>',
-		'<a href="http://redmatrix.me/">red<img class="smiley" src="' . z_root() . '/images/rm-16.png" alt="red" />matrix</a>'
-	);
-
-	$params = array('texts' => $texts, 'icons' => $icons, 'string' => $s);
-	call_hooks('smilie', $params);
-
-	if($sample) {
-		$s = '<div class="smiley-sample">';
-		for($x = 0; $x < count($params['texts']); $x ++) {
-			$s .= '<dl><dt>' . $params['texts'][$x] . '</dt><dd>' . $params['icons'][$x] . '</dd></dl>';
-		}
-	}
-	else {
-		$params['string'] = preg_replace_callback('/&lt;(3+)/','preg_heart',$params['string']);
-		$s = str_replace($params['texts'],$params['icons'],$params['string']);
-	}
-
-	$s = preg_replace_callback('/<pre>(.*?)<\/pre>/ism','smile_decode',$s);
-	$s = preg_replace_callback('/<code>(.*?)<\/code>/ism','smile_decode',$s);
-
-	return $s;
-
-}}
-
-function smile_encode($m) {
-	return(str_replace($m[1],base64url_encode($m[1]),$m[0]));
-}
-
-function smile_decode($m) {
-	return(str_replace($m[1],base64url_decode($m[1]),$m[0]));
-}
-
-
-/**
- * expand <3333 to the correct number of hearts
- *
- * @param string $x
- * @return string
- */
-function preg_heart($x) {
-	$a = get_app();
-	if(strlen($x[1]) == 1)
-		return $x[0];
-	$t = '';
-	for($cnt = 0; $cnt < strlen($x[1]); $cnt ++)
-		$t .= '<img class="smiley" src="' . z_root() . '/images/smiley-heart.gif" alt="&lt;3" />';
-	$r =  str_replace($x[0],$t,$x[0]);
-	return $r;
-}
-
-
 if(! function_exists('day_translate')) {
 /**
  * Translate days and months names
@@ -1334,7 +1153,7 @@ function redir_private_images($a, &$item) {
 
 			if((local_user() == $item['uid']) && ($item['private'] != 0) && ($item['contact-id'] != $a->contact['id']) && ($item['network'] == NETWORK_DFRN)) {
 				//logger("redir_private_images: redir");
-				$img_url = z_root() . '/redir?f=1&quiet=1&url=' . $mtch[1] . '&conurl=' . $item['author-link'];
+				$img_url = 'redir?f=1&quiet=1&url=' . $mtch[1] . '&conurl=' . $item['author-link'];
 				$item['body'] = str_replace($mtch[0], "[img]".$img_url."[/img]", $item['body']);
 			}
 		}
@@ -1415,7 +1234,14 @@ function prepare_body(&$item,$attach = false, $preview = false) {
 	$item['hashtags'] = $hashtags;
 	$item['mentions'] = $mentions;
 
-	put_item_in_cache($item, true);
+	// Update the cached values if there is no "zrl=..." on the links
+	$update = (!local_user() and !remote_user() and ($item["uid"] == 0));
+
+	// Or update it if the current viewer is the intented viewer
+	if (($item["uid"] == local_user()) AND ($item["uid"] != 0))
+		$update = true;
+
+	put_item_in_cache($item, $update);
 	$s = $item["rendered-html"];
 
 	$prep_arr = array('item' => $item, 'html' => $s, 'preview' => $preview);
@@ -1443,7 +1269,7 @@ function prepare_body(&$item,$attach = false, $preview = false) {
 					$mime = $mtch[3];
 
 					if((local_user() == $item['uid']) && ($item['contact-id'] != $a->contact['id']) && ($item['network'] == NETWORK_DFRN))
-						$the_url = z_root() . '/redir/' . $item['contact-id'] . '?f=1&url=' . $mtch[1];
+						$the_url = 'redir/' . $item['contact-id'] . '?f=1&url=' . $mtch[1];
 					else
 						$the_url = $mtch[1];
 
@@ -1526,7 +1352,7 @@ function prepare_body(&$item,$attach = false, $preview = false) {
 
 		$pos = strpos($s, $spoilersearch);
 		$rnd = random_string(8);
-		$spoilerreplace = '<br /> <span id="spoiler-wrap-'.$rnd.'" style="white-space:nowrap;" class="fakelink" onclick="openClose(\'spoiler-'.$rnd.'\');">'.sprintf(t('Click to open/close')).'</span>'.
+		$spoilerreplace = '<br /> <span id="spoiler-wrap-'.$rnd.'" class="spoiler-wrap fakelink" onclick="openClose(\'spoiler-'.$rnd.'\');">'.sprintf(t('Click to open/close')).'</span>'.
 					'<blockquote class="spoiler" id="spoiler-'.$rnd.'" style="display: none;">';
 		$s = substr($s, 0, $pos).$spoilerreplace.substr($s, $pos+strlen($spoilersearch));
 	}
@@ -1538,7 +1364,7 @@ function prepare_body(&$item,$attach = false, $preview = false) {
 
 		$pos = strpos($s, $authorsearch);
 		$rnd = random_string(8);
-		$authorreplace = '<br /> <span id="author-wrap-'.$rnd.'" style="white-space:nowrap;" class="fakelink" onclick="openClose(\'author-'.$rnd.'\');">'.sprintf(t('Click to open/close')).'</span>'.
+		$authorreplace = '<br /> <span id="author-wrap-'.$rnd.'" class="author-wrap fakelink" onclick="openClose(\'author-'.$rnd.'\');">'.sprintf(t('Click to open/close')).'</span>'.
 					'<blockquote class="author" id="author-'.$rnd.'" style="display: block;">';
 		$s = substr($s, 0, $pos).$authorreplace.substr($s, $pos+strlen($authorsearch));
 	}
@@ -1571,7 +1397,7 @@ function prepare_text($text) {
 	if(stristr($text,'[nosmile]'))
 		$s = bbcode($text);
 	else
-		$s = smilies(bbcode($text));
+		$s = Smilies::replace(bbcode($text));
 
 	return trim($s);
 }}
@@ -1618,7 +1444,7 @@ function get_cats_and_terms($item) {
 			$categories[] = array(
 				'name' => xmlify(file_tag_decode($mtch[1])),
 				'url' =>  "#",
-				'removeurl' => ((local_user() == $item['uid'])?z_root() . '/filerm/' . $item['id'] . '?f=&cat=' . xmlify(file_tag_decode($mtch[1])):""),
+				'removeurl' => ((local_user() == $item['uid'])?'filerm/' . $item['id'] . '?f=&cat=' . xmlify(file_tag_decode($mtch[1])):""),
 				'first' => $first,
 				'last' => false
 			);
@@ -1636,7 +1462,7 @@ function get_cats_and_terms($item) {
 				$folders[] = array(
 					'name' => xmlify(file_tag_decode($mtch[1])),
 					'url' =>  "#",
-					'removeurl' => ((local_user() == $item['uid'])?z_root() . '/filerm/' . $item['id'] . '?f=&term=' . xmlify(file_tag_decode($mtch[1])):""),
+					'removeurl' => ((local_user() == $item['uid'])?'filerm/' . $item['id'] . '?f=&term=' . xmlify(file_tag_decode($mtch[1])):""),
 					'first' => $first,
 					'last' => false
 				);
@@ -1650,54 +1476,6 @@ function get_cats_and_terms($item) {
 	return array($categories, $folders);
 }
 
-
-
-if(! function_exists('feed_hublinks')) {
-/**
- * return atom link elements for all of our hubs
- * @return string hub link xml elements
- */
-function feed_hublinks() {
-	$a = get_app();
-	$hub = get_config('system','huburl');
-
-	$hubxml = '';
-	if(strlen($hub)) {
-		$hubs = explode(',', $hub);
-		if(count($hubs)) {
-			foreach($hubs as $h) {
-				$h = trim($h);
-				if(! strlen($h))
-					continue;
-				if ($h === '[internal]')
-					$h = z_root() . '/pubsubhubbub';
-				$hubxml .= '<link rel="hub" href="' . xmlify($h) . '" />' . "\n" ;
-			}
-		}
-	}
-	return $hubxml;
-}}
-
-
-if(! function_exists('feed_salmonlinks')) {
-/**
- * return atom link elements for salmon endpoints
- * @param string $nick user nickname
- * @return string salmon link xml elements
- */
-function feed_salmonlinks($nick) {
-
-	$a = get_app();
-
-	$salmon  = '<link rel="salmon" href="' . xmlify(z_root() . '/salmon/' . $nick) . '" />' . "\n" ;
-
-	// old style links that status.net still needed as of 12/2010
-
-	$salmon .= '  <link rel="http://salmon-protocol.org/ns/salmon-replies" href="' . xmlify(z_root() . '/salmon/' . $nick) . '" />' . "\n" ;
-	$salmon .= '  <link rel="http://salmon-protocol.org/ns/salmon-mention" href="' . xmlify(z_root() . '/salmon/' . $nick) . '" />' . "\n" ;
-	return $salmon;
-}}
-
 if(! function_exists('get_plink')) {
 /**
  * get private link for item
@@ -1709,15 +1487,15 @@ function get_plink($item) {
 
 	if ($a->user['nickname'] != "") {
 		$ret = array(
-				//'href' => z_root()."/display/".$a->user['nickname']."/".$item['id'],
-				'href' => z_root()."/display/".$item['guid'],
-				'orig' => z_root()."/display/".$item['guid'],
+				//'href' => "display/".$a->user['nickname']."/".$item['id'],
+				'href' => "display/".$item['guid'],
+				'orig' => "display/".$item['guid'],
 				'title' => t('View on separate page'),
 				'orig_title' => t('view on separate page'),
 			);
 
 		if (x($item,'plink')) {
-			$ret["href"] = $item['plink'];
+			$ret["href"] = $a->remove_baseurl($item['plink']);
 			$ret["title"] = t('link to source');
 		}
 

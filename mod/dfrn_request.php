@@ -10,6 +10,8 @@
  */
 
 require_once('include/enotify.php');
+require_once('include/Scrape.php');
+require_once('include/group.php');
 
 if(! function_exists('dfrn_request_init')) {
 function dfrn_request_init(&$a) {
@@ -41,8 +43,10 @@ function dfrn_request_init(&$a) {
 if(! function_exists('dfrn_request_post')) {
 function dfrn_request_post(&$a) {
 
-	if(($a->argc != 2) || (! count($a->profile)))
+	if(($a->argc != 2) || (! count($a->profile))) {
+		logger('Wrong count of argc or profiles: argc=' . $a->argc . ',profile()=' . count($a->profile));
 		return;
+	}
 
 
 	if(x($_POST, 'cancel')) {
@@ -112,8 +116,6 @@ function dfrn_request_post(&$a) {
 					 * Scrape the other site's profile page to pick up the dfrn links, key, fn, and photo
 					 */
 
-					require_once('include/Scrape.php');
-
 					$parms = scrape_dfrn($dfrn_url);
 
 					if(! count($parms)) {
@@ -173,19 +175,16 @@ function dfrn_request_post(&$a) {
 					info( t("Introduction complete.") . EOL);
 				}
 
-				$r = q("select id from contact where uid = %d and url = '%s' and `site-pubkey` = '%s' limit 1",
+				$r = q("SELECT `id`, `network` FROM `contact` WHERE `uid` = %d AND `url` = '%s' AND `site-pubkey` = '%s' LIMIT 1",
 					intval(local_user()),
 					dbesc($dfrn_url),
 					$parms['key'] // this was already escaped
 				);
 				if(count($r)) {
-					$g = q("select def_gid from user where uid = %d limit 1",
-						intval(local_user())
-					);
-					if($g && intval($g[0]['def_gid'])) {
-						require_once('include/group.php');
-						group_add_member(local_user(),'',$r[0]['id'],$g[0]['def_gid']);
-					}
+					$def_gid = get_default_group(local_user(), $r[0]["network"]);
+					if(intval($def_gid))
+						group_add_member(local_user(), '', $r[0]['id'], $def_gid);
+
 					$forwardurl = $a->get_baseurl()."/contacts/".$r[0]['id'];
 				} else
 					$forwardurl = $a->get_baseurl()."/contacts";
@@ -387,20 +386,16 @@ function dfrn_request_post(&$a) {
 				intval($rel)
 			);
 
-			$r = q("select id from contact where poll = '%s' and uid = %d limit 1",
+			$r = q("SELECT `id`, `network` FROM `contact` WHERE `poll` = '%s' AND `uid` = %d LIMIT 1",
 				dbesc($poll),
 				intval($uid)
 			);
 			if(count($r)) {
 				$contact_id = $r[0]['id'];
 
-				$g = q("select def_gid from user where uid = %d limit 1",
-					intval($uid)
-				);
-				if($g && intval($g[0]['def_gid'])) {
-					require_once('include/group.php');
-					group_add_member($uid,'',$contact_id,$g[0]['def_gid']);
-				}
+				$def_gid = get_default_group($uid, $r[0]["network"]);
+				if (intval($def_gid))
+					group_add_member($uid, '', $contact_id, $def_gid);
 
 				$photo = avatar_img($addr);
 
@@ -441,30 +436,28 @@ function dfrn_request_post(&$a) {
 
 			// Next send an email verify form to the requestor.
 
-		}
-
-		else {
+		} else {
+			// Detect the network
+			$data = probe_url($url);
+			$network = $data["network"];
 
 			// Canonicalise email-style profile locator
-
 			$url = webfinger_dfrn($url,$hcard);
 
-			if(substr($url,0,5) === 'stat:') {
-				$network = NETWORK_OSTATUS;
+			if (substr($url,0,5) === 'stat:') {
+
+				// Every time we detect the remote subscription we define this as OStatus.
+				// We do this even if it is not OStatus.
+				// we only need to pass this through another section of the code.
+				if ($network != NETWORK_DIASPORA)
+					$network = NETWORK_OSTATUS;
+
 				$url = substr($url,5);
-			}
-			else {
+			} else
 				$network = NETWORK_DFRN;
-			}
 		}
 
-		logger('dfrn_request: url: ' . $url);
-
-		if(! strlen($url)) {
-			notice( t("Unable to resolve your name at the provided location.") . EOL);
-			return;
-		}
-
+		logger('dfrn_request: url: ' . $url . ',network=' . $network, LOGGER_DEBUG);
 
 		if($network === NETWORK_DFRN) {
 			$ret = q("SELECT * FROM `contact` WHERE `uid` = %d AND `url` = '%s' AND `self` = 0 LIMIT 1",
@@ -610,24 +603,34 @@ function dfrn_request_post(&$a) {
 			);
 			// NOTREACHED
 			// END $network === NETWORK_DFRN
-		}
-		elseif($network === NETWORK_OSTATUS) {
+		} elseif (($network != NETWORK_PHANTOM) AND ($url != "")) {
 
 			/**
 			 *
-			 * OStatus network
-			 * Check contact existence
-			 * Try and scrape together enough information to create a contact record,
-			 * with us as CONTACT_IS_FOLLOWER
 			 * Substitute our user's feed URL into $url template
 			 * Send the subscriber home to subscribe
 			 *
 			 */
 
-			$url = str_replace('{uri}', $a->get_baseurl() . '/profile/' . $nickname, $url);
+			// Diaspora needs the uri in the format user@domain.tld
+			// Diaspora will support the remote subscription in a future version
+			if ($network == NETWORK_DIASPORA) {
+				$uri = $nickname.'@'.$a->get_hostname();
+
+				if ($a->get_path())
+					$uri .= '/'.$a->get_path();
+
+				$uri = urlencode($uri);
+			} else
+				$uri = $a->get_baseurl().'/profile/'.$nickname;
+
+			$url = str_replace('{uri}', $uri, $url);
 			goaway($url);
 			// NOTREACHED
-			// END $network === NETWORK_OSTATUS
+			// END $network != NETWORK_PHANTOM
+		} else {
+			notice(t("Remote subscription can't be done for your network. Please subscribe directly on your system.").EOL);
+			return;
 		}
 
 	}	return;
@@ -818,7 +821,7 @@ function dfrn_request_content(&$a) {
 		else
 			$tpl = get_markup_template('auto_request.tpl');
 
-		$page_desc .= t("Please enter your 'Identity Address' from one of the following supported communications networks:");
+		$page_desc = t("Please enter your 'Identity Address' from one of the following supported communications networks:");
 
 		// see if we are allowed to have NETWORK_MAIL2 contacts
 
@@ -843,7 +846,7 @@ function dfrn_request_content(&$a) {
 			get_server()
 		);
 
-		$o .= replace_macros($tpl,array(
+		$o = replace_macros($tpl,array(
 			'$header' => t('Friend/Connection Request'),
 			'$desc' => t('Examples: jojo@demo.friendica.com, http://demo.friendica.com/profile/jojo, testuser@identi.ca'),
 			'$pls_answer' => t('Please answer the following:'),

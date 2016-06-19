@@ -1,22 +1,22 @@
-  function resizeIframe(obj) {
-    obj.style.height = 0;
-	_resizeIframe(obj, 0);
-  }
-  
-  function _resizeIframe(obj, desth) {
-	var h = obj.style.height;
-	var ch = obj.contentWindow.document.body.scrollHeight + 'px';
-	if (h==ch) {
-		return;
+	function resizeIframe(obj) {
+		//obj.style.height = 0;
+		_resizeIframe(obj, 0);
 	}
-	console.log("_resizeIframe", obj, desth, ch);
-	if (desth!=ch) {
-		setTimeout(_resizeIframe, 500, obj, ch);
-	} else {
-		obj.style.height  = ch;
-		setTimeout(_resizeIframe, 1000, obj, ch);
+
+	function _resizeIframe(obj, desth) {
+		var h = obj.style.height;
+		var ch = obj.contentWindow.document.body.scrollHeight + 'px';
+		if (h==ch) {
+			return;
+		}
+		//console.log("_resizeIframe", obj, desth, ch);
+		if (desth!=ch) {
+			setTimeout(_resizeIframe, 500, obj, ch);
+		} else {
+			if (ch>0) obj.style.height  = ch;
+			setTimeout(_resizeIframe, 1000, obj, ch);
+		}
 	}
-  }
 
   function openClose(theID) {
     if(document.getElementById(theID).style.display == "block") {
@@ -51,6 +51,7 @@
 	var commentBusy = false;
 	var last_popup_menu = null;
 	var last_popup_button = null;
+	var lockLoadContent = false;
 
 	$(function() {
 		$.ajaxSetup({cache: false});
@@ -147,6 +148,7 @@
 			} else {
 				last_popup_menu = menu;
 				last_popup_button = parent;
+				$('#nav-notifications-menu').perfectScrollbar('update');
 			}
 			return false;
 		});
@@ -159,13 +161,18 @@
 			'inline' : true,
 			'transition' : 'elastic'
 		});
-
+		$("a.ajax-popupbox").colorbox({
+			'transition' : 'elastic'
+		});
 
 		/* notifications template */
 		var notifications_tpl= unescape($("#nav-notifications-template[rel=template]").html());
 		var notifications_all = unescape($('<div>').append( $("#nav-notifications-see-all").clone() ).html()); //outerHtml hack
 		var notifications_mark = unescape($('<div>').append( $("#nav-notifications-mark-all").clone() ).html()); //outerHtml hack
 		var notifications_empty = unescape($("#nav-notifications-menu").html());
+
+		/* enable perfect-scrollbars for different elements */
+		$('#nav-notifications-menu, aside').perfectScrollbar();
 
 		/* nav update event  */
 		$('nav').bind('nav-update', function(e,data){
@@ -247,13 +254,18 @@
 				eNotif.children("note").each(function(){
 					e = $(this);
 					var text = e.text().format("<span class='contactname'>"+e.attr('name')+"</span>");
+					var contact = ("<a href="+e.attr('url')+"><span class='contactname'>"+e.attr('name')+"</span></a>");
 					var seenclass = (e.attr('seen')==1)?"notify-seen":"notify-unseen";
-					var html = notifications_tpl.format(e.attr('href'),
-						e.attr('photo'),                    // {0}
-						text,                               // {1}
-						e.attr('date'),                     // {2}
-						seenclass,                          // {3}
-						new Date(e.attr('timestamp')*1000)  // {4}
+					var html = notifications_tpl.format(
+						e.attr('href'),                     // {0}  // link to the source
+						e.attr('photo'),                    // {1}  // photo of the contact
+						text,                               // {2}  // preformatet text (autor + text)
+						e.attr('date'),                     // {3}  // date of notification (time ago)
+						seenclass,                          // {4}  // vistiting status of the notification
+						new Date(e.attr('timestamp')*1000), // {5}  //date of notification
+						e.attr('url'),                      // {6}  // profile url of the contact
+						e.text().format(""),                // {7}  // clean status text
+						contact                             // {8}  //preformatat author (name + profile url)
 					);
 					nnm.append(html);
 				});
@@ -306,6 +318,9 @@
 				$.jGrowl(text, { sticky: false, theme: 'info', life: 5000 });
 			});
 
+			/* update the js scrollbars */
+			$('#nav-notifications-menu').perfectScrollbar('update');
+
 		});
 
  		NavUpdate();
@@ -334,6 +349,21 @@
 				}
 			}
 		});
+
+		// Set an event listener for infinite scroll
+		if(typeof infinite_scroll !== 'undefined') {
+			$(window).scroll(function(e){
+				if ($(document).height() != $(window).height()) {
+					// First method that is expected to work - but has problems with Chrome
+					if ($(window).scrollTop() > ($(document).height() - $(window).height() * 1.5))
+						loadScrollContent();
+				} else {
+					// This method works with Chrome - but seems to be much slower in Firefox
+					if ($(window).scrollTop() > (($("section").height() + $("header").height() + $("footer").height()) - $(window).height() * 1.5))
+						loadScrollContent();
+				}
+			});
+		}
 
 
 	});
@@ -480,8 +510,10 @@
 				$('body').css('cursor', 'auto');
 			}
 			/* autocomplete @nicknames */
-			$(".comment-edit-form  textarea").contact_autocomplete(baseurl+"/acl");
-
+			$(".comment-edit-form  textarea").editor_autocomplete(baseurl+"/acl");
+			/* autocomplete bbcode */
+			$(".comment-edit-form  textarea").bbco_autocomplete('bbcode');
+			
 			// setup videos, since VideoJS won't take care of any loaded via AJAX
 			if(typeof videojs != 'undefined') videojs.autoSetup();
 		});
@@ -693,6 +725,31 @@
 		$('#pause').html('');
 	}
 
+	// load more network content (used for infinite scroll)
+	function loadScrollContent() {
+		if (lockLoadContent) return;
+		lockLoadContent = true;
+
+		$("#scroll-loader").fadeIn('normal');
+
+		// the page number to load is one higher than the actual
+		// page number
+		infinite_scroll.pageno+=1;
+
+		console.log('Loading page ' + infinite_scroll.pageno);
+
+		// get the raw content from the next page and insert this content
+		// right before "#conversation-end"
+		$.get('network?mode=raw' + infinite_scroll.reload_uri + '&page=' + infinite_scroll.pageno, function(data) {
+			$("#scroll-loader").hide();
+			if ($(data).length > 0) {
+				$(data).insertBefore('#conversation-end');
+				lockLoadContent = false;
+			} else {
+				$("#scroll-end").fadeIn('normal');
+			}
+		});
+	}
 
     function bin2hex(s){
         // Converts the binary representation of data to hex

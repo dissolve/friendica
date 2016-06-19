@@ -47,6 +47,19 @@ We can't promise we have the right skills in the group but we'll try.
 Programming
 ---
 
+###Code documentation
+
+If you are interested in having the documentation of the Friendica code outside of the code files, you can use [Doxygen](http://doxygen.org) to generate it.
+The configuration file for Doxygen is located in the ```util``` directory of the project sources.
+Run
+
+    $> doxygen util/Doxyfile
+
+to generate the files which will be located in the ```doc/html``` subdirectory in the Friendica directory.
+You can browse these files with any browser.
+
+If you find missing documentation, don't hestitate to contact us and write it down to enhance the code documentation.
+
 ###Issues
 
 Have a look at our [issue tracker](https://github.com/friendica/friendica) on github!
@@ -70,11 +83,11 @@ Ask us to find out whom to talk to about their experiences.
 Do not worry about cross-posting.
 
 ###Client software
-There are free software clients that do somehow work with Friendica but most of them need love and maintenance.
-Also, they were mostly made for other platforms using the GNU Social API.
-This means they lack the features that are really specific to Friendica.
-Popular clients you might want to have a look at are:
+As Friendica is using a [Twitter/GNU Social compatible API](help/api) any of the clients for those platforms should work with Friendica as well.
+Furthermore there are several client projects, especially for use with Friendica.
+If you are interested in improving those clients, please contact the developers of the clients directly.
 
-* [Hotot (Linux)](http://hotot.org/) - abandoned
-* [Friendica for Android](https://github.com/max-weller/friendica-for-android) - abandoned
-* You can find more working client software in [Wikipedia](https://en.wikipedia.org/wiki/Friendica).
+* Android / CynogenMod: **Friendica for Android** [src](https://github.com/max-weller/friendica-for-android), [homepage](http://friendica.android.max-weller.de/) - abandoned
+* iOS: *currently no client*
+* SailfishOS: **Friendiy** [src](https://kirgroup.com/projects/fabrixxm/harbour-friendly) - developed by [Fabio](https://kirgroup.com/profile/fabrixxm/?tab=profile)
+* Windows: **Friendica Mobile** for Windows versions [before 8.1](http://windowsphone.com/s?appid=e3257730-c9cf-4935-9620-5261e3505c67) and [Windows 10](https://www.microsoft.com/store/apps/9nblggh0fhmn) - developed by [Gerhard Seeber](http://mozartweg.dyndns.org/friendica/profile/gerhard/?tab=profile)
