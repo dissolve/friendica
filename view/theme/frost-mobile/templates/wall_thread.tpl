@@ -5,15 +5,15 @@
 	</div>
 	<div id="collapsed-comments-{{$item.id}}" class="collapsed-comments" style="display: none;">
 {{/if}}
-<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}}">
+<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}} {{if $item.toplevel}} h-entry {{else}} u-comment h-cite {{/if}}">
 <a name="{{$item.id}}" ></a>
 {{*<!--<div class="wall-item-outside-wrapper {{$item.indent}}{{$item.previewing}} wallwall" id="wall-item-outside-wrapper-{{$item.id}}" >-->*}}
 	<div class="wall-item-content-wrapper {{$item.indent}}" id="wall-item-content-wrapper-{{$item.id}}" >
 		<div class="wall-item-info{{if $item.owner_url}} wallwall{{/if}}" id="wall-item-info-{{$item.id}}">
 			{{if $item.owner_url}}
-			<div class="wall-item-photo-wrapper wwto" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
-				<a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="wall-item-photo-link" id="wall-item-ownerphoto-link-{{$item.id}}">
-				<img src="{{$item.owner_photo}}" class="wall-item-photo{{$item.osparkle}}" id="wall-item-ownerphoto-{{$item.id}}" style="height: 48px; width: 48px;" alt="{{$item.owner_name}}" onError="this.src='../../../images/person-48.jpg';" />
+			<div class="wall-item-photo-wrapper wwto p-author h-card" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
+				<a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="wall-item-photo-link u-url" id="wall-item-ownerphoto-link-{{$item.id}}">
+				<img src="{{$item.owner_photo}}" class="wall-item-photo{{$item.osparkle}} p-name u-photo" id="wall-item-ownerphoto-{{$item.id}}" style="height: 48px; width: 48px;" alt="{{$item.owner_name}}" onError="this.src='../../../images/person-48.jpg';" />
 				</a>
 			</div>
 			<div class="wall-item-arrowphoto-wrapper" ><img src="images/larrow.gif" alt="{{$item.wall}}" /></div>
@@ -43,25 +43,25 @@
 		{{*<!--<div class="wall-item-author">-->*}}
 				<a href="{{$item.profile_url}}" target="redir" title="{{$item.linktitle}}" class="wall-item-name-link"><span class="wall-item-name{{$item.sparkle}}" id="wall-item-name-{{$item.id}}" >{{$item.name}}</span></a>{{if $item.owner_url}} {{$item.to}} <a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="wall-item-name-link"><span class="wall-item-name{{$item.osparkle}}" id="wall-item-ownername-{{$item.id}}">{{$item.owner_name}}</span></a> {{$item.vwall}}{{/if}}<br />
 				<div class="wall-item-ago"  id="wall-item-ago-{{$item.id}}">
-				{{if $item.plink}}<a title="{{$item.plink.title}}" href="{{$item.plink.href}}" style="color: #999">{{$item.ago}}</a>{{else}} {{$item.ago}} {{/if}}
+				{{if $item.plink}}<a title="{{$item.plink.title}}" href="{{$item.plink.href}}" class="u-url" style="color: #999"><time class="dt-published" datetime="{{$item.localtime}}">{{$item.ago}}</time></a>{{else}} <time class="dt-published" datetime="{{$item.localtime}}">{{$item.ago}}</time> {{/if}}
 				</div>
 		{{*<!--</div>-->*}}
 		<div class="wall-item-content" id="wall-item-content-{{$item.id}}" >
-			<div class="wall-item-title" id="wall-item-title-{{$item.id}}">{{$item.title}}</div>
+			<div class="wall-item-title p-name" id="wall-item-title-{{$item.id}}">{{$item.title}}</div>
 			{{*<!--<div class="wall-item-title-end"></div>-->*}}
-			<div class="wall-item-body" id="wall-item-body-{{$item.id}}" >{{$item.body}}
+			<div class="wall-item-body" id="wall-item-body-{{$item.id}}" ><span class="e-content">{{$item.body}}</span>
 					{{*<!--<div class="body-tag">-->*}}
 						{{foreach $item.tags as $tag}}
 							<span class='body-tag tag'>{{$tag}}</span>
 						{{/foreach}}
 					{{*<!--</div>-->*}}
 			{{if $item.has_cats}}
-			<div class="categorytags">{{$item.txt_cats}} {{foreach $item.categories as $cat}}{{$cat.name}} <a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> {{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
+			<div class="categorytags">{{$item.txt_cats}} {{foreach $item.categories as $cat}}<span class="p-category">{{$cat.name}}</span> <a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> {{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
 			</div>
 			{{/if}}
 
 			{{if $item.has_folders}}
-			<div class="filesavetags">{{$item.txt_folders}} {{foreach $item.folders as $cat}}{{$cat.name}} <a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> {{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
+			<div class="filesavetags">{{$item.txt_folders}} {{foreach $item.folders as $cat}}<span class="p-category">{{$cat.name}}</span> <a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> {{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
 			</div>
 			{{/if}}
 			</div>

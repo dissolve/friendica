@@ -7,15 +7,15 @@
 	<div id="collapsed-comments-{{$item.id}}" class="collapsed-comments" style="display: none;">
 {{/if}}
 
-<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}}">
+<div id="tread-wrapper-{{$item.id}}" class="tread-wrapper {{$item.toplevel}} {{if $item.toplevel}} h-entry {{else}} u-comment h-cite {{/if}}">
 <div class="wall-item-outside-wrapper {{$item.indent}} {{$item.shiny}} wallwall" id="wall-item-outside-wrapper-{{$item.id}}" >
 <div class="wall-item-content-wrapper {{$item.indent}} {{$item.shiny}}" id="wall-item-content-wrapper-{{$item.id}}" >
 
 		<div class="wall-item-info{{if $item.owner_url}} wallwall{{/if}}" id="wall-item-info-{{$item.id}}">
 			{{if $item.owner_url}}
-			<div class="wall-item-photo-wrapper mframe wwto" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
-				<a href="{{$item.owner_url}}" title="{{$item.olinktitle}}" class="wall-item-photo-link" id="wall-item-ownerphoto-link-{{$item.id}}">
-				<img src="{{$item.owner_photo}}" class="wall-item-photo{{$item.osparkle}}" id="wall-item-ownerphoto-{{$item.id}}" style="height: 80px; width: 80px;" alt="{{$item.owner_name}}" /></a>
+			<div class="wall-item-photo-wrapper mframe wwto p-author h-card" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
+				<a href="{{$item.owner_url}}" title="{{$item.olinktitle}}" class="wall-item-photo-link u-url" id="wall-item-ownerphoto-link-{{$item.id}}">
+				<img src="{{$item.owner_photo}}" class="wall-item-photo{{$item.osparkle}} p-name u-photo" id="wall-item-ownerphoto-{{$item.id}}" style="height: 80px; width: 80px;" alt="{{$item.owner_name}}" /></a>
 			</div>
 			<div class="wall-item-arrowphoto-wrapper" ><img src="view/theme/smoothly/images/larrow.gif" alt="{{$item.wall}}" /></div>
 			{{/if}}
@@ -50,15 +50,15 @@
 			<span class="wall-item-name{{$item.sparkle}}" id="wall-item-name-{{$item.id}}" >{{$item.name}}</span>
 			</a>
 			<div class="wall-item-ago">&bull;</div>
-			<div class="wall-item-ago" id="wall-item-ago-{{$item.id}}" title="{{$item.localtime}}">{{$item.ago}}</div>
+			<div class="wall-item-ago" id="wall-item-ago-{{$item.id}}" title="{{$item.localtime}}"><time class="dt-published" datetime="{{$item.localtime}}">{{$item.ago}}</time></div>
 		</div>	
 
 		<div>
 		<hr class="line-dots">
 		</div>
-			<div class="wall-item-title" id="wall-item-title-{{$item.id}}">{{$item.title}}</div>
+			<div class="wall-item-title p-name" id="wall-item-title-{{$item.id}}">{{$item.title}}</div>
 			<div class="wall-item-title-end"></div>
-			<div class="wall-item-body" id="wall-item-body-{{$item.id}}" >{{$item.body}}
+			<div class="wall-item-body" id="wall-item-body-{{$item.id}}" ><span class="e-content">{{$item.body}}</span>
 				<div class="body-tag">
 					{{foreach $item.tags as $tag}}
 					<span class='tag'>{{$tag}}</span>
@@ -66,14 +66,14 @@
 				</div>
 
 				{{if $item.has_cats}}
-				<div class="categorytags"><span>{{$item.txt_cats}} {{foreach $item.categories as $cat}}{{$cat.name}} 
+				<div class="categorytags"><span>{{$item.txt_cats}} {{foreach $item.categories as $cat}}<span class="p-category">{{$cat.name}}</span> 
 				<a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> 
 				{{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
 				</div>
 				{{/if}}
 
 				{{if $item.has_folders}}
-				<div class="filesavetags"><span>{{$item.txt_folders}} {{foreach $item.folders as $cat}}{{$cat.name}} 
+				<div class="filesavetags"><span>{{$item.txt_folders}} {{foreach $item.folders as $cat}}<span class="p-category">{{$cat.name}}</span> 
 				<a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> 
 				{{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
 				</div>
@@ -97,7 +97,7 @@
 
 			{{if $item.plink}}
 			<div class="wall-item-links-wrapper">
-				<a href="{{$item.plink.href}}" title="{{$item.plink.title}}" target="external-link" class="icon remote-link"></a>
+				<a href="{{$item.plink.href}}" title="{{$item.plink.title}}" target="external-link" class="icon remote-link u-url"></a>
 			</div>
 			{{/if}}
 		 

@@ -19,7 +19,7 @@
 {{/if}}
 {{/if}}
 
-{{if $item.thread_level!=1}}<div class="children">{{/if}}
+{{if $item.thread_level!=1}}<div class="children u-comment h-cite">{{/if}}
 
 <div class="wall-item-decor">
 	{{if $item.star}}<span class="icon s22 star {{$item.isstarred}}" id="starred-{{$item.id}}" title="{{$item.star.starred}}">{{$item.star.starred}}</span>{{/if}}
@@ -43,17 +43,17 @@
 				
 			</div>	
 			{{if $item.owner_url}}
-			<div class="contact-photo-wrapper mframe wwto" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
-				<a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="contact-photo-link" id="wall-item-ownerphoto-link-{{$item.id}}">
-					<img src="{{$item.owner_photo}}" class="contact-photo {{$item.osparkle}}" id="wall-item-ownerphoto-{{$item.id}}" alt="{{$item.owner_name}}" />
+			<div class="contact-photo-wrapper mframe wwto p-author h-card" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
+				<a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="contact-photo-link u-url" id="wall-item-ownerphoto-link-{{$item.id}}">
+					<img src="{{$item.owner_photo}}" class="contact-photo {{$item.osparkle}} p-name u-photo" id="wall-item-ownerphoto-{{$item.id}}" alt="{{$item.owner_name}}" />
 				</a>
 			</div>
 			{{/if}}			
 			<div class="wall-item-location">{{$item.location}}</div>	
 		</div>
 		<div class="wall-item-content">
-			{{if $item.title}}<h2><a href="{{$item.plink.href}}" class="{{$item.sparkle}}">{{$item.title}}</a></h2>{{/if}}
-			{{$item.body}}
+			{{if $item.title}}<h2><a href="{{$item.plink.href}}" class="{{$item.sparkle}} p-name">{{$item.title}}</a></h2>{{/if}}
+			<span class="e-content">{{$item.body}}</span>
 		</div>
 	</div>
 	<div class="wall-item-bottom">
@@ -67,16 +67,16 @@
 				<span class='mention'>{{$tag}}</span>
 			{{/foreach}}
                {{foreach $item.folders as $cat}}
-                    <span class='folder'>{{$cat.name}}</a>{{if $cat.removeurl}} (<a href="{{$cat.removeurl}}" title="{{$remove}}">x</a>) {{/if}} </span>
+                    <span class='folder p-category'>{{$cat.name}}</a>{{if $cat.removeurl}} (<a href="{{$cat.removeurl}}" title="{{$remove}}">x</a>) {{/if}} </span>
                {{/foreach}}
                 {{foreach $item.categories as $cat}}
-                    <span class='category'>{{$cat.name}}</a>{{if $cat.removeurl}} (<a href="{{$cat.removeurl}}" title="{{$remove}}">x</a>) {{/if}} </span>
+                    <span class='category p-category'>{{$cat.name}}</a>{{if $cat.removeurl}} (<a href="{{$cat.removeurl}}" title="{{$remove}}">x</a>) {{/if}} </span>
                 {{/foreach}}
 		</div>
 	</div>	
 	<div class="wall-item-bottom">
 		<div class="wall-item-links">
-			{{if $item.plink}}<a class="icon s16 link{{$item.sparkle}}" title="{{$item.plink.title}}" href="{{$item.plink.href}}">{{$item.plink.title}}</a>{{/if}}
+			{{if $item.plink}}<a class="icon s16 link{{$item.sparkle}} u-url" title="{{$item.plink.title}}" href="{{$item.plink.href}}">{{$item.plink.title}}</a>{{/if}}
 		</div>
 		<div class="wall-item-actions">
 			<div class="wall-item-actions-author">
@@ -84,7 +84,7 @@
                                 title="{{$item.linktitle}}"
                                 class="wall-item-name-link"><span
                                 class="wall-item-name{{$item.sparkle}}">{{$item.name}}</span></a>
-                                <span class="wall-item-ago" title="{{$item.localtime}}">{{$item.ago}}</span>
+                                <span class="wall-item-ago" title="{{$item.localtime}}"><time class="dt-published" datetime="{{$item.localtime}}">{{$item.ago}}</time></span>
 				 {{if $item.owner_url}}<br/>{{$item.to}} <a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="wall-item-name-link"><span class="wall-item-name{{$item.osparkle}}" id="wall-item-ownername-{{$item.id}}">{{$item.owner_name}}</span></a> {{$item.vwall}}
 				 {{/if}}
 			</div>
