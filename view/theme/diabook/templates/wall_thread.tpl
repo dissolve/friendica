@@ -38,7 +38,7 @@
 			</div>
 		<div class="wall-item-content">
 			{{if $item.title}}<h2><a href="{{$item.plink.href}}" class="p-name">{{$item.title}}</a></h2>{{/if}}
-			<span class="e-content">{{$item.body}}</span>
+			<span class="e-content {{if !$item.title}}p-name{{/if}}">{{$item.body}}</span>
 			{{if $item.has_cats}}
 			<div class="categorytags"><span>{{$item.txt_cats}} {{foreach $item.categories as $cat}}<span class="p-category">{{$cat.name}}</span> <a href="{{$cat.removeurl}}" title="{{$remove}}">[{{$remove}}]</a> {{if $cat.last}}{{else}}, {{/if}}{{/foreach}}
 			</div>

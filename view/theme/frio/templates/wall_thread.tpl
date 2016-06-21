@@ -140,10 +140,10 @@ as the value of $top_child_total (this is done at the end of this file)
 		{{* The avatar picture and the photo-menu *}}
 		<div class="dropdown pull-left"><!-- Dropdown -->
 			{{if $item.thread_level==1}}
-			<div class="hidden-sm hidden-xs contact-photo-wrapper mframe{{if $item.owner_url}} wwfrom{{/if}}">
-				<a class="userinfo" id="wall-item-photo-menu-{{$item.id}}" href="{{$item.profile_url}}">
+			<div class="hidden-sm hidden-xs contact-photo-wrapper mframe{{if $item.owner_url}} wwfrom{{/if}} p-author h-card">
+				<a class="userinfo" id="wall-item-photo-menu-{{$item.id}} u-url" href="{{$item.profile_url}}">
 					<div class="contact-photo-image-wrapper">
-						<img src="{{$item.thumb}}" class="contact-photo media-object {{$item.sparkle}}" id="wall-item-photo-{{$item.id}}" alt="{{$item.name}}" />
+						<img src="{{$item.thumb}}" class="contact-photo media-object {{$item.sparkle}} p-name u-photo" id="wall-item-photo-{{$item.id}}" alt="{{$item.name}}" />
 					</div>
 				</a>
 			</div>
@@ -157,9 +157,9 @@ as the value of $top_child_total (this is done at the end of this file)
 
 			{{* The litle overlay avatar picture if someone is posting directly to a wall or a forum *}}
 			{{if $item.owner_url}}
-			<div aria-hidden="true" class="contact-photo-wrapper mframe wwto p-author h-card" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
-				<a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="contact-photo-link u-url" id="wall-item-ownerphoto-link-{{$item.id}}">
-					<img src="{{$item.owner_photo}}" class="contact-photo {{$item.osparkle}} p-name u-photo" id="wall-item-ownerphoto-{{$item.id}}" alt="{{$item.owner_name}}" />
+			<div aria-hidden="true" class="contact-photo-wrapper mframe wwto" id="wall-item-ownerphoto-wrapper-{{$item.id}}" >
+				<a href="{{$item.owner_url}}" target="redir" title="{{$item.olinktitle}}" class="contact-photo-link" id="wall-item-ownerphoto-link-{{$item.id}}">
+					<img src="{{$item.owner_photo}}" class="contact-photo {{$item.osparkle}}" id="wall-item-ownerphoto-{{$item.id}}" alt="{{$item.owner_name}}" />
 				</a>
 			</div>
 			{{/if}}
@@ -168,10 +168,10 @@ as the value of $top_child_total (this is done at the end of this file)
 
 			{{* The avatar picture for comments *}}
 			{{if $item.thread_level!=1}}
-			<div class="contact-photo-wrapper mframe{{if $item.owner_url}} wwfrom{{/if}}">
-				<a class="userinfo" id="wall-item-photo-menu-{{$item.id}}" href="{{$item.profile_url}}">
+			<div class="contact-photo-wrapper mframe{{if $item.owner_url}} wwfrom{{/if}} p-author h-card">
+				<a class="userinfo" id="wall-item-photo-menu-{{$item.id}} u-url" href="{{$item.profile_url}}">
 					<div class="contact-photo-image-wrapper">
-						<img src="{{$item.thumb}}" class="contact-photo-xs media-object {{$item.sparkle}}" id="wall-item-photo-{{$item.id}}" alt="{{$item.name}}" />
+						<img src="{{$item.thumb}}" class="contact-photo-xs media-object {{$item.sparkle}} p-name u-photo" id="wall-item-photo-{{$item.id}}" alt="{{$item.name}}" />
 					</div>
 				</a>
 			</div>
@@ -242,7 +242,7 @@ as the value of $top_child_total (this is done at the end of this file)
 			<span class="wall-item-title" id="wall-item-title-{{$item.id}}"><h4 class="media-heading"><a href="{{$item.plink.href}}" class="{{$item.sparkle}} p-name">{{$item.title}}</a></h4><br /></span>
 			{{/if}}
 
-			<div class="wall-item-body e-content" id="wall-item-body-{{$item.id}}">{{$item.body}}</div>
+			<div class="wall-item-body e-content {{if !$item.title}}p-name{{/if}}" id="wall-item-body-{{$item.id}}">{{$item.body}}</div>
 		</div>
 
 		<!-- TODO -->
@@ -343,7 +343,7 @@ as the value of $top_child_total (this is done at the end of this file)
 		{{if $item.responses}}
 			<div class="wall-item-responses">
 				{{foreach $item.responses as $verb=>$response}}
-				<div class="wall-item-{{$verb}} h-cite" id="wall-item-{{$verb}}-{{$item.id}}">{{$response.output}}</div>
+				<div class="wall-item-{{$verb}}" id="wall-item-{{$verb}}-{{$item.id}}">{{$response.output}}</div>
 				{{/foreach}}
 			</div>
 		{{/if}}
